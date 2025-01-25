@@ -1,10 +1,15 @@
-from openai import OpenAI
+import requests
 from typing import List, Dict
 import os
 
 class AIAgent:
     def __init__(self):
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        self.api_key = os.getenv('OPENROUTER_API_KEY')
+        self.base_url = "https://openrouter.ai/api/v1"
+        self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
         self.system_prompt = """You are a helpful AI assistant that analyzes web content. 
         Your task is to summarize and analyze the provided content, extracting key insights 
         and providing a comprehensive analysis."""
@@ -17,15 +22,22 @@ class AIAgent:
         )
         
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4",
-                messages=[
+            payload = {
+                "model": "openai/gpt-4",
+                "messages": [
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": f"Analyze this content:\n{formatted_content}"}
                 ],
-                temperature=0.7,
-                max_tokens=2000
+                "temperature": 0.7,
+                "max_tokens": 2000
+            }
+            
+            response = requests.post(
+                f"{self.base_url}/chat/completions",
+                headers=self.headers,
+                json=payload
             )
-            return response.choices[0].message.content
+            response.raise_for_status()
+            return response.json()['choices'][0]['message']['content']
         except Exception as e:
             return f"Analysis failed: {str(e)}"
