@@ -23,7 +23,7 @@ class AIAgent:
         
         try:
             payload = {
-                "model": "openai/gpt-4",
+                "model": "deepseek-chat",
                 "messages": [
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": f"Analyze this content:\n{formatted_content}"}
