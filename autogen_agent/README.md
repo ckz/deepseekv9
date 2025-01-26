@@ -11,8 +11,8 @@ cp .env.template .env
 
 2. Add your API keys to the `.env` file:
 ```
-SEARCH_API_KEY="de80447f7a71861ca7a198bd5fbfe8fe46d061afd02988200064f9cb76fc0372"
-OPENROUTER_API_KEY="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"
+SEARCH_API_KEY="expired-71861ca7a198bd5fbfe8fe46d061afd02988200064f9cb76fc0372"
+OPENROUTER_API_KEY="sk-or-expired-9ffb095e5110215700e236d70187f3f85d7fb6dc15b8ca01304ecc042c27e2a5"
 ```
 
 3. Install dependencies:
