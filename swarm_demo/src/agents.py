@@ -7,7 +7,7 @@ import os
 import logging
 from datetime import datetime
 import json
-from serpapi import GoogleSearch
+from serpapi.google_search import GoogleSearch
 import yfinance as yf
 import pandas as pd
 from textblob import TextBlob
