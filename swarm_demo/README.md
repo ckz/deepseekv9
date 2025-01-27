@@ -233,6 +233,147 @@ class SystemMonitor:
         pass
 ```
 
+## Agent思维链追踪系统
+
+系统实现了完整的Agent思维链追踪机制，可以记录和分析每个Agent的决策过程。
+
+### 1. 思维链记录器
+
+```python
+from utils import ThoughtLogger, AnalysisContext
+
+# 创建分析上下文
+context = AnalysisContext("Tesla Q4 2024 Earnings")
+
+# 记录Agent思维
+context.log_agent_thought(
+    agent_name="Yahoo_Analyst",
+    thought={
+        "action": "market_analysis",
+        "findings": {
+            "price_trend": "上涨2.5%",
+            "technical_indicators": {
+                "sma20": "180.50",
+                "sma50": "165.75",
+                "trend": "Bullish"
+            }
+        }
+    }
+)
+```
+
+### 2. 思维链存储格式
+
+思维链以JSON格式存储在logs目录下，文件命名格式：
+```
+YYYYMMDD_AgentName_AnalysisID_thoughts.json
+```
+
+示例内容：
+```json
+{
+    "agent": "Yahoo_Analyst",
+    "analysis_id": "20240127_042159_Tesla_Q4_2024_Earnings",
+    "timestamp": "2024-01-27T04:21:59.123456",
+    "thoughts": [
+        {
+            "step": 1,
+            "timestamp": "2024-01-27T04:21:59.123456",
+            "content": {
+                "action": "start_processing",
+                "query": "TSLA",
+                "description": "Starting to process Yahoo Finance data"
+            }
+        },
+        {
+            "step": 2,
+            "timestamp": "2024-01-27T04:22:00.234567",
+            "content": {
+                "action": "market_analysis",
+                "findings": {
+                    "price_trend": "上涨2.5%",
+                    "technical_indicators": {
+                        "sma20": "180.50",
+                        "sma50": "165.75"
+                    }
+                }
+            }
+        }
+    ]
+}
+```
+
+### 3. 使用示例
+
+基本使用：
+```python
+from main import run_sync
+
+# 运行分析（自动包含思维链记录）
+result = run_sync("TSLA")
+
+# 访问思维链数据
+thought_chains = result["thought_chains"]
+
+# 查看各Agent的分析步骤
+print(f"Yahoo Finance分析步骤: {len(thought_chains['yahoo']['thoughts'])}")
+print(f"Google News分析步骤: {len(thought_chains['google']['thoughts'])}")
+print(f"报告生成步骤: {len(thought_chains['writer']['thoughts'])}")
+
+# 查看具体分析过程
+for thought in thought_chains['yahoo']['thoughts']:
+    print(f"步骤 {thought['step']}: {thought['content']['action']}")
+    if 'findings' in thought['content']:
+        print(f"发现: {thought['content']['findings']}")
+```
+
+高级用法：
+```python
+# 自定义分析上下文
+context = AnalysisContext("TSLA")
+
+# Yahoo Finance分析
+yahoo_data = await agents["yahoo"].process_news("TSLA", context)
+
+# 获取Yahoo分析思维链
+yahoo_thoughts = context.get_agent_thoughts("Yahoo_Analyst")
+
+# 分析决策过程
+for thought in yahoo_thoughts["thoughts"]:
+    if thought["content"]["action"] == "market_analysis":
+        print(f"市场趋势: {thought['content']['findings']['price_trend']}")
+        print(f"技术指标: {thought['content']['findings']['technical_indicators']}")
+```
+
+### 4. 思维链分析工具
+
+```python
+class ThoughtChainAnalyzer:
+    @staticmethod
+    def analyze_decision_process(thought_chain):
+        """分析决策过程的关键节点"""
+        key_decisions = []
+        for thought in thought_chain["thoughts"]:
+            if "findings" in thought["content"]:
+                key_decisions.append({
+                    "timestamp": thought["timestamp"],
+                    "action": thought["content"]["action"],
+                    "findings": thought["content"]["findings"]
+                })
+        return key_decisions
+
+    @staticmethod
+    def get_analysis_summary(thought_chains):
+        """生成多个Agent的分析总结"""
+        return {
+            agent: {
+                "total_steps": len(chain["thoughts"]),
+                "key_decisions": len([t for t in chain["thoughts"] if "findings" in t["content"]])
+            }
+            for agent, chain in thought_chains.items()
+        }
+```
+
 ## 使用示例
 
 ```python

@@ -14,6 +14,7 @@ from agents import (
     get_default_manager_config
 )
 from config import Config, validate_config, get_agent_configs
+from utils import AnalysisContext
 
 # 设置日志
 logging.basicConfig(level=Config.get_system_config()["log_level"])
@@ -59,12 +60,16 @@ async def run_analysis(
     try:
         logger.info(f"Starting analysis for topic: {topic}")
         
+        # 创建分析上下文
+        context = AnalysisContext(topic)
+        logger.info(f"Created analysis context with ID: {context.analysis_id}")
+        
         # 收集Yahoo Finance数据
-        yahoo_data = await agents["yahoo"].process_news(topic)
+        yahoo_data = await agents["yahoo"].process_news(topic, context)
         logger.info("Yahoo Finance data collected")
         
         # 收集Google新闻数据
-        google_data = await agents["google"].analyze_news(topic)
+        google_data = await agents["google"].analyze_news(topic, context)
         logger.info("Google News data collected")
         
         # 生成报告
@@ -74,8 +79,18 @@ async def run_analysis(
             "timestamp": datetime.utcnow().isoformat()
         }
         
-        final_report = await agents["writer"].generate_report(analysis_results)
+        final_report = await agents["writer"].generate_report(analysis_results, context)
         logger.info("Final report generated")
+        
+        # 记录完整的思维链
+        thought_chains = {
+            "yahoo": context.get_agent_thoughts(agents["yahoo"].name),
+            "google": context.get_agent_thoughts(agents["google"].name),
+            "writer": context.get_agent_thoughts(agents["writer"].name)
+        }
+        
+        # 将思维链添加到最终报告
+        final_report["thought_chains"] = thought_chains
         
         return final_report
     
