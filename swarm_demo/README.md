@@ -1,23 +1,23 @@
-# 基于AutoGen的多Agent财经新闻分析系统
+# Multi-Agent Financial News Analysis System Based on AutoGen
 
-## 系统架构概述
-该系统基于AutoGen框架构建，利用GroupChat和GroupChatManager实现多Agent协作的财经新闻分析系统。系统采用AutoGen的高级抽象能力，实现灵活的Agent交互和任务协调。
+## System Architecture Overview
+This system is built on the AutoGen framework, utilizing GroupChat and GroupChatManager to implement a multi-agent financial news analysis system. The system leverages AutoGen's advanced abstraction capabilities to achieve flexible agent interaction and task coordination.
 
-## AutoGen Agent设计
+## AutoGen Agent Design
 
-### 1. GroupChatManager (调度员)
-- **实现类**: `autogen.GroupChatManager`
-- **主要职责**:
-  - 管理GroupChat中所有Agent的交互
-  - 控制消息流转和对话顺序
-  - 确保任务完成和目标达成
-  - 处理异常情况和冲突解决
+### 1. GroupChatManager (Coordinator)
+- **Implementation Class**: `autogen.GroupChatManager`
+- **Main Responsibilities**:
+  - Manage interactions between all agents in GroupChat
+  - Control message flow and conversation sequence
+  - Ensure task completion and goal achievement
+  - Handle exceptions and conflict resolution
 
-- **配置参数**:
+- **Configuration Parameters**:
 ```python
 manager_config = {
     "name": "Research_Manager",
-    "system_message": "你是一个专业的研究项目经理，负责协调新闻分析任务...",
+    "system_message": "You are a professional research project manager responsible for coordinating news analysis tasks...",
     "llm_config": {
         "temperature": 0.7,
         "request_timeout": 300
@@ -25,82 +25,82 @@ manager_config = {
 }
 ```
 
-### 2. Yahoo Finance分析师
-- **实现类**: `autogen.AssistantAgent`
-- **配置示例**:
+### 2. Yahoo Finance Analyst
+- **Implementation Class**: `autogen.AssistantAgent`
+- **Configuration Example**:
 ```python
 yahoo_analyst_config = {
     "name": "Yahoo_Analyst",
-    "system_message": "你是Yahoo Finance的专业分析师，负责收集和分析财经数据...",
+    "system_message": "You are a Yahoo Finance professional analyst responsible for collecting and analyzing financial data...",
     "llm_config": {
         "temperature": 0.3,
         "request_timeout": 120
     }
 }
 ```
-- **功能实现**:
+- **Implementation**:
 ```python
 class YahooFinanceAgent(autogen.AssistantAgent):
     async def process_news(self, query):
-        # 实现Yahoo Finance新闻获取和分析逻辑
+        # Implements Yahoo Finance news retrieval and analysis logic
         pass
 ```
 
-### 3. Google News分析师
-- **实现类**: `autogen.AssistantAgent`
-- **配置示例**:
+### 3. Google News Analyst
+- **Implementation Class**: `autogen.AssistantAgent`
+- **Configuration Example**:
 ```python
 google_analyst_config = {
     "name": "Google_Analyst",
-    "system_message": "你是Google新闻的专业分析师，负责通过SerpAPI获取和分析新闻...",
+    "system_message": "You are a Google News professional analyst responsible for retrieving and analyzing news through SerpAPI...",
     "llm_config": {
         "temperature": 0.3,
         "request_timeout": 120
     }
 }
 ```
-- **功能实现**:
+- **Implementation**:
 ```python
 class GoogleNewsAgent(autogen.AssistantAgent):
     async def analyze_news(self, query):
-        # 实现Google新闻分析逻辑
+        # Implements Google news analysis logic
         pass
 ```
 
-### 4. 财经报告撰写员
-- **实现类**: `autogen.AssistantAgent`
-- **配置示例**:
+### 4. Financial Report Writer
+- **Implementation Class**: `autogen.AssistantAgent`
+- **Configuration Example**:
 ```python
 report_writer_config = {
     "name": "Report_Writer",
-    "system_message": "你是专业的财经报告撰写专家，负责整合分析结果并生成报告...",
+    "system_message": "You are a professional financial report writing expert responsible for integrating analysis results and generating reports...",
     "llm_config": {
         "temperature": 0.4,
         "request_timeout": 180
     }
 }
 ```
-- **功能实现**:
+- **Implementation**:
 ```python
 class ReportWriterAgent(autogen.AssistantAgent):
     async def generate_report(self, analysis_results):
-        # 实现报告生成逻辑
+        # Implements report generation logic
         pass
 ```
 
-## 系统实现示例
+## System Implementation Example
 
-### 1. GroupChat初始化
+### 1. GroupChat Initialization
 ```python
 from autogen import GroupChat, GroupChatManager
 
-# 创建Agents
+# Create Agents
 manager = GroupChatManager(**manager_config)
 yahoo_analyst = YahooFinanceAgent(**yahoo_analyst_config)
 google_analyst = GoogleNewsAgent(**google_analyst_config)
 report_writer = ReportWriterAgent(**report_writer_config)
 
-# 创建GroupChat
+# Create GroupChat
 group_chat = GroupChat(
     agents=[manager, yahoo_analyst, google_analyst, report_writer],
     messages=[],
@@ -108,65 +108,65 @@ group_chat = GroupChat(
 )
 ```
 
-### 2. 任务执行流程
+### 2. Task Execution Flow
 ```python
 async def run_analysis(topic: str):
-    # 初始化任务
+    # Initialize task
     chat_manager = GroupChatManager(groupchat=group_chat)
     
-    # 启动分析流程
+    # Start analysis process
     await chat_manager.run(
-        initial_message=f"开始分析主题: {topic}",
+        initial_message=f"Start analyzing topic: {topic}",
         sender=manager
     )
 ```
 
-## 工作流程详解
+## Workflow Details
 
-1. **初始化阶段**
+1. **Initialization Phase**
 ```python
-# 配置环境变量
+# Configure environment variables
 os.environ["SERPAPI_API_KEY"] = "your_serp_api_key"
 os.environ["YAHOO_FINANCE_API_KEY"] = "your_yahoo_api_key"
 
-# 初始化系统
+# Initialize system
 async def initialize_system():
-    # 创建所有必要的Agent实例
+    # Create all necessary Agent instances
     agents = create_agents()
-    # 设置GroupChat
+    # Set up GroupChat
     group_chat = setup_group_chat(agents)
     return group_chat
 ```
 
-2. **数据收集阶段**
+2. **Data Collection Phase**
 ```python
 async def collect_data(topic: str):
-    # Yahoo Finance数据收集
+    # Yahoo Finance data collection
     yahoo_data = await yahoo_analyst.process_news(topic)
     
-    # Google News数据收集
+    # Google News data collection
     google_data = await google_analyst.analyze_news(topic)
     
     return yahoo_data, google_data
 ```
 
-3. **分析和报告生成**
+3. **Analysis and Report Generation**
 ```python
 async def generate_final_report(yahoo_data, google_data):
-    # 整合数据
+    # Integrate data
     combined_data = {
         "yahoo_analysis": yahoo_data,
         "google_analysis": google_data
     }
     
-    # 生成报告
+    # Generate report
     final_report = await report_writer.generate_report(combined_data)
     return final_report
 ```
 
-## 配置要求
+## Configuration Requirements
 
-### 1. 环境依赖
+### 1. Environment Dependencies
 ```txt
 pyautogen>=0.2.0
 python-dotenv>=0.19.0
@@ -175,83 +175,83 @@ yfinance>=0.1.70
 pandas>=1.3.0
 ```
 
-### 2. API配置
+### 2. API Configuration
 ```python
-# .env文件配置
+# .env file configuration
 SERPAPI_API_KEY=your_serp_api_key
 YAHOO_FINANCE_API_KEY=your_yahoo_api_key
 OPENAI_API_KEY=your_openai_api_key
 ```
 
-## 错误处理机制
+## Error Handling Mechanism
 
 ```python
 class ErrorHandler:
     @staticmethod
     async def handle_api_error(error, agent):
-        # 实现错误处理逻辑
+        # Implement error handling logic
         pass
 
     @staticmethod
     async def retry_operation(func, max_retries=3):
-        # 实现重试逻辑
+        # Implement retry logic
         pass
 ```
 
-## 扩展性设计
+## Extensibility Design
 
-1. **添加新Agent**
+1. **Adding New Agents**
 ```python
-# 创建新的专业Agent
+# Create new specialist Agent
 class NewSpecialistAgent(autogen.AssistantAgent):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # 添加特定功能
+        # Add specific functionality
 ```
 
-2. **自定义分析规则**
+2. **Custom Analysis Rules**
 ```python
 class AnalysisRules:
     @staticmethod
     def add_custom_rule(rule_name, rule_function):
-        # 实现规则添加逻辑
+        # Implement rule addition logic
         pass
 ```
 
-## 监控和日志
+## Monitoring and Logging
 
 ```python
 class SystemMonitor:
     @staticmethod
     async def log_agent_activity(agent, action):
-        # 实现日志记录
+        # Implement logging
         pass
 
     @staticmethod
     async def monitor_performance():
-        # 实现性能监控
+        # Implement performance monitoring
         pass
 ```
 
-## Agent思维链追踪系统
+## Agent Thought Chain Tracking System
 
-系统实现了完整的Agent思维链追踪机制，可以记录和分析每个Agent的决策过程。
+The system implements a complete agent thought chain tracking mechanism that records and analyzes each agent's decision-making process.
 
-### 1. 思维链记录器
+### 1. Thought Chain Recorder
 
 ```python
 from utils import ThoughtLogger, AnalysisContext
 
-# 创建分析上下文
+# Create analysis context
 context = AnalysisContext("Tesla Q4 2024 Earnings")
 
-# 记录Agent思维
+# Record Agent thoughts
 context.log_agent_thought(
     agent_name="Yahoo_Analyst",
     thought={
         "action": "market_analysis",
         "findings": {
-            "price_trend": "上涨2.5%",
+            "price_trend": "Up 2.5%",
             "technical_indicators": {
                 "sma20": "180.50",
                 "sma50": "165.75",
@@ -262,14 +262,14 @@ context.log_agent_thought(
 )
 ```
 
-### 2. 思维链存储格式
+### 2. Thought Chain Storage Format
 
-思维链以JSON格式存储在logs目录下，文件命名格式：
+Thought chains are stored in JSON format in the logs directory, with file naming format:
 ```
 YYYYMMDD_AgentName_AnalysisID_thoughts.json
 ```
 
-示例内容：
+Example content:
 ```json
 {
     "agent": "Yahoo_Analyst",
@@ -291,7 +291,7 @@ YYYYMMDD_AgentName_AnalysisID_thoughts.json
             "content": {
                 "action": "market_analysis",
                 "findings": {
-                    "price_trend": "上涨2.5%",
+                    "price_trend": "Up 2.5%",
                     "technical_indicators": {
                         "sma20": "180.50",
                         "sma50": "165.75"
@@ -303,55 +303,55 @@ YYYYMMDD_AgentName_AnalysisID_thoughts.json
 }
 ```
 
-### 3. 使用示例
+### 3. Usage Example
 
-基本使用：
+Basic usage:
 ```python
 from main import run_sync
 
-# 运行分析（自动包含思维链记录）
+# Run analysis (automatically includes thought chain recording)
 result = run_sync("TSLA")
 
-# 访问思维链数据
+# Access thought chain data
 thought_chains = result["thought_chains"]
 
-# 查看各Agent的分析步骤
-print(f"Yahoo Finance分析步骤: {len(thought_chains['yahoo']['thoughts'])}")
-print(f"Google News分析步骤: {len(thought_chains['google']['thoughts'])}")
-print(f"报告生成步骤: {len(thought_chains['writer']['thoughts'])}")
+# View analysis steps for each Agent
+print(f"Yahoo Finance analysis steps: {len(thought_chains['yahoo']['thoughts'])}")
+print(f"Google News analysis steps: {len(thought_chains['google']['thoughts'])}")
+print(f"Report generation steps: {len(thought_chains['writer']['thoughts'])}")
 
-# 查看具体分析过程
+# View specific analysis process
 for thought in thought_chains['yahoo']['thoughts']:
-    print(f"步骤 {thought['step']}: {thought['content']['action']}")
+    print(f"Step {thought['step']}: {thought['content']['action']}")
     if 'findings' in thought['content']:
-        print(f"发现: {thought['content']['findings']}")
+        print(f"Findings: {thought['content']['findings']}")
 ```
 
-高级用法：
+Advanced usage:
 ```python
-# 自定义分析上下文
+# Custom analysis context
 context = AnalysisContext("TSLA")
 
-# Yahoo Finance分析
+# Yahoo Finance analysis
 yahoo_data = await agents["yahoo"].process_news("TSLA", context)
 
-# 获取Yahoo分析思维链
+# Get Yahoo analysis thought chain
 yahoo_thoughts = context.get_agent_thoughts("Yahoo_Analyst")
 
-# 分析决策过程
+# Analyze decision process
 for thought in yahoo_thoughts["thoughts"]:
     if thought["content"]["action"] == "market_analysis":
-        print(f"市场趋势: {thought['content']['findings']['price_trend']}")
-        print(f"技术指标: {thought['content']['findings']['technical_indicators']}")
+        print(f"Market trend: {thought['content']['findings']['price_trend']}")
+        print(f"Technical indicators: {thought['content']['findings']['technical_indicators']}")
 ```
 
-### 4. 思维链分析工具
+### 4. Thought Chain Analysis Tools
 
 ```python
 class ThoughtChainAnalyzer:
     @staticmethod
     def analyze_decision_process(thought_chain):
-        """分析决策过程的关键节点"""
+        """Analyze key points in the decision process"""
         key_decisions = []
         for thought in thought_chain["thoughts"]:
             if "findings" in thought["content"]:
@@ -364,7 +364,7 @@ class ThoughtChainAnalyzer:
 
     @staticmethod
     def get_analysis_summary(thought_chains):
-        """生成多个Agent的分析总结"""
+        """Generate summary of multiple Agents' analyses"""
         return {
             agent: {
                 "total_steps": len(chain["thoughts"]),
@@ -374,20 +374,20 @@ class ThoughtChainAnalyzer:
         }
 ```
 
-## 使用示例
+## Usage Example
 
 ```python
 async def main():
-    # 初始化系统
+    # Initialize system
     group_chat = await initialize_system()
     
-    # 设置分析主题
+    # Set analysis topic
     topic = "Tesla Q4 2024 Earnings"
     
-    # 运行分析
+    # Run analysis
     await run_analysis(topic)
     
-    # 获取结果
+    # Get results
     final_report = await get_final_report()
     
     return final_report
