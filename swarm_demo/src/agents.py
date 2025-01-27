@@ -121,15 +121,21 @@ def create_group_chat(
 ) -> autogen.GroupChat:
     """创建GroupChat实例"""
     try:
-        # 创建GroupChatManager
-        manager = autogen.GroupChatManager(**manager_config)
-        
         # 创建GroupChat
         group_chat = autogen.GroupChat(
-            agents=[manager] + agents,
+            agents=agents,
             messages=[],
             max_round=50
         )
+        
+        # 创建GroupChatManager并关联GroupChat
+        manager = autogen.GroupChatManager(
+            groupchat=group_chat,
+            **manager_config
+        )
+        
+        # 将manager添加到agents列表
+        group_chat.agents.insert(0, manager)
         
         return group_chat
     except Exception as e:
