@@ -1,7 +1,7 @@
 """
 Yahoo Finance analysis agent.
 """
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 import yfinance as yf
 from .base_agent import BaseAgent
@@ -26,6 +26,28 @@ class YahooFinanceAgent(BaseAgent):
             **kwargs
         )
         
+        # 定义agent能力
+        self.capabilities = {
+            "process_news": "Analyze financial news and market data from Yahoo Finance",
+            "get_market_data": "Retrieve specific market data for a given ticker",
+            "analyze_trends": "Analyze market trends and patterns"
+        }
+    
+    async def execute_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute tasks within the SWARM network"""
+        action = task.get("action")
+        params = task.get("params", {})
+        context = params.get("context")
+        
+        if action == "process_news":
+            return await self.process_news(params.get("topic"), context)
+        elif action == "get_market_data":
+            return await self.get_market_data(params.get("ticker"), context)
+        elif action == "analyze_trends":
+            return await self.analyze_trends(params.get("data"), context)
+        else:
+            raise ValueError(f"Unknown action: {action}")
+
     async def process_news(self, query: str, context: Optional['AnalysisContext'] = None) -> Dict[str, Any]:
         """处理Yahoo Finance新闻数据"""
         logger.info(f"Processing Yahoo Finance news for query: {query}")
@@ -47,11 +69,14 @@ class YahooFinanceAgent(BaseAgent):
             ticker = company_to_ticker.get(company, company)
             
             # 使用MarketService获取市场数据
-            market_data = MarketService.get_stock_data(ticker)
+            market_data = await self.get_market_data(ticker, context)
             
             # 获取新闻数据
             stock = yf.Ticker(ticker)
             news = MarketService.process_stock_news(stock)
+            
+            # 分析趋势
+            trends_analysis = await self.analyze_trends(market_data, context)
             
             # 准备结果
             result = {
@@ -60,7 +85,8 @@ class YahooFinanceAgent(BaseAgent):
                 "timestamp": datetime.utcnow().isoformat(),
                 "data": {
                     "news": news,
-                    **market_data
+                    **market_data,
+                    "trends_analysis": trends_analysis
                 }
             }
 
@@ -81,3 +107,56 @@ class YahooFinanceAgent(BaseAgent):
             
         except Exception as e:
             self._handle_error(e, "processing Yahoo Finance news")
+    
+    async def get_market_data(self, ticker: str, context: Optional['AnalysisContext'] = None) -> Dict[str, Any]:
+        """获取市场数据"""
+        try:
+            self._log_context(context, "get_market_data", {
+                "ticker": ticker,
+                "description": "Retrieving market data"
+            })
+            
+            market_data = MarketService.get_stock_data(ticker)
+            return market_data
+            
+        except Exception as e:
+            self._handle_error(e, "getting market data")
+    
+    async def analyze_trends(self, data: Dict[str, Any], context: Optional['AnalysisContext'] = None) -> Dict[str, Any]:
+        """分析市场趋势"""
+        try:
+            self._log_context(context, "analyze_trends", {
+                "description": "Analyzing market trends"
+            })
+            
+            trends = data.get("trends", [])
+            indicators = data.get("technical_indicators", {})
+            
+            analysis = {
+                "trend_summary": self._summarize_trends(trends),
+                "indicator_signals": self._analyze_indicators(indicators),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+            return analysis
+            
+        except Exception as e:
+            self._handle_error(e, "analyzing trends")
+    
+    def _summarize_trends(self, trends: List[Dict[str, Any]]) -> str:
+        """总结趋势"""
+        if not trends:
+            return "No trend data available"
+            
+        latest_trend = trends[0]
+        return f"Price {latest_trend['direction']} by {latest_trend['change']}%"
+    
+    def _analyze_indicators(self, indicators: Dict[str, Any]) -> Dict[str, str]:
+        """分析技术指标"""
+        signals = {}
+        for indicator, value in indicators.items():
+            if indicator == "RSI":
+                signals[indicator] = "Overbought" if value > 70 else "Oversold" if value < 30 else "Neutral"
+            elif indicator == "MACD":
+                signals[indicator] = "Bullish" if value > 0 else "Bearish"
+        return signals

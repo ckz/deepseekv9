@@ -3,7 +3,7 @@ Agent creation utilities.
 """
 import os
 from typing import Dict, Any, List
-import autogen
+from autogen import GroupChat, GroupChatManager
 import logging
 from .yahoo_agent import YahooFinanceAgent
 from .google_agent import GoogleNewsAgent
@@ -11,31 +11,31 @@ from .report_agent import ReportWriterAgent
 
 logger = logging.getLogger(__name__)
 
-def create_group_chat(
+def create_swarm_network(
     manager_config: Dict[str, Any],
-    agents: List[autogen.AssistantAgent]
-) -> autogen.GroupChat:
+    agents: List[Any]
+) -> Dict[str, Any]:
     """创建GroupChat实例"""
     try:
         # 创建GroupChat
-        group_chat = autogen.GroupChat(
+        group_chat = GroupChat(
             agents=agents,
             messages=[],
             max_round=50
         )
         
-        # 创建GroupChatManager并关联GroupChat
-        manager = autogen.GroupChatManager(
+        # 创建GroupChatManager
+        manager = GroupChatManager(
             groupchat=group_chat,
-            **manager_config
+            llm_config=manager_config["llm_config"]
         )
         
-        # 将manager添加到agents列表
-        group_chat.agents.insert(0, manager)
-        
-        return group_chat
+        return {
+            "group_chat": group_chat,
+            "manager": manager
+        }
     except Exception as e:
-        logger.error(f"Error creating group chat: {str(e)}")
+        logger.error(f"Error creating swarm: {str(e)}")
         raise
 
 def get_default_manager_config() -> Dict[str, Any]:
@@ -48,12 +48,17 @@ def get_default_manager_config() -> Dict[str, Any]:
 3. 确保任务完成
 4. 处理异常情况""",
         "llm_config": {
-            "temperature": float(os.getenv("TEMPERATURE", 0.7)),
-            "request_timeout": 300
+            "config_list": [{
+                "model": os.getenv("LLM_MODEL", "anthropic/claude-3-sonnet"),
+                "api_key": os.getenv("OPENROUTER_API_KEY"),
+                "base_url": os.getenv("OPENROUTER_BASE_URL"),
+                "api_type": "openrouter"
+            }],
+            "temperature": float(os.getenv("TEMPERATURE", 0.7))
         }
     }
 
-def create_analysis_agents(config: Dict[str, Any]) -> List[autogen.AssistantAgent]:
+def create_analysis_agents(config: Dict[str, Any]) -> List[Any]:
     """创建分析Agent实例"""
     try:
         yahoo_agent = YahooFinanceAgent(**config.get("yahoo_analyst", {}))

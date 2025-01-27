@@ -3,12 +3,12 @@ Base agent class with common functionality.
 """
 import logging
 from typing import Dict, Any, Optional
-import autogen
+from autogen import AssistantAgent as Agent
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-class BaseAgent(autogen.AssistantAgent):
+class BaseAgent(Agent):
     """Base agent class with common functionality"""
     
     def __init__(self, name: str, system_message: str, **kwargs):
@@ -16,8 +16,9 @@ class BaseAgent(autogen.AssistantAgent):
         super().__init__(
             name=name,
             system_message=system_message,
-            **kwargs
+            llm_config=kwargs.get('llm_config', {})
         )
+        self._system_message = system_message
     
     def _log_context(self, context: Optional['AnalysisContext'], 
                     action: str, details: Dict[str, Any]) -> None:
@@ -27,6 +28,7 @@ class BaseAgent(autogen.AssistantAgent):
                 agent_name=self.name,
                 thought={
                     "action": action,
+                    "timestamp": datetime.utcnow().isoformat(),
                     **details
                 }
             )
@@ -42,3 +44,26 @@ class BaseAgent(autogen.AssistantAgent):
         """Common context update logic"""
         if context:
             context.update_context(self.name, result)
+    
+    async def execute_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute a task within the agent network"""
+        try:
+            action = task.get("action")
+            context = task.get("context")
+            
+            if not action:
+                raise ValueError("Task must specify an action")
+            
+            self._log_context(context, action, {"task_received": task})
+            
+            # Execute the specific action
+            if hasattr(self, action):
+                result = await getattr(self, action)(**task.get("params", {}))
+                self._update_context(context, result)
+                return result
+            else:
+                raise ValueError(f"Unknown action: {action}")
+                
+        except Exception as e:
+            self._handle_error(e, f"execute_task - {task.get('action', 'unknown')}")
+            return {"error": str(e)}

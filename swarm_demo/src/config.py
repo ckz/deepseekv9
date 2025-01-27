@@ -42,21 +42,14 @@ class Config:
         os.environ["OPENAI_API_BASE"] = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
         
         return {
-            "temperature": float(os.getenv("TEMPERATURE", 0.7)),
-            "max_tokens": int(os.getenv("MAX_TOKENS", 4000)),
-            "model": os.getenv("LLM_MODEL", "anthropic/claude-3-sonnet"),
-            "request_timeout": 300,
-            "seed": 42,
-            "config_list_timeout": 120,
-            "use_cache": True,
-            "context_length": 4096,
-            "api_base": os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
-            "api_type": "openai",
-            "api_key": api_key,
-            "default_headers": {
-                "HTTP-Referer": "https://github.com/microsoft/autogen",
-                "X-Title": "AutoGen Financial News Analysis"
-            }
+            "config_list": [{
+                "model": os.getenv("LLM_MODEL", "anthropic/claude-3-sonnet"),
+                "api_key": api_key,
+                "base_url": os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+                "api_type": "openrouter",
+                "max_tokens": int(os.getenv("MAX_TOKENS", 4000))
+            }],
+            "temperature": float(os.getenv("TEMPERATURE", 0.7))
         }
     
     @staticmethod
@@ -75,8 +68,12 @@ def validate_config():
         
         # 验证LLM配置
         llm_config = Config.get_llm_config()
-        required_fields = ["temperature", "max_tokens", "model", "api_key", "api_base"]
-        if not all(k in llm_config for k in required_fields):
+        if not llm_config.get("config_list"):
+            raise ValueError("Missing config_list in LLM configuration")
+        
+        config = llm_config["config_list"][0]
+        required_fields = ["model", "api_key", "base_url", "api_type"]
+        if not all(k in config for k in required_fields):
             raise ValueError(f"Missing required LLM configuration parameters: {required_fields}")
         
         # 验证系统配置
@@ -98,23 +95,14 @@ def get_agent_configs() -> Dict[str, Dict[str, Any]]:
     return {
         "yahoo_analyst": {
             "name": "Yahoo_Analyst",
-            "llm_config": {
-                **llm_config,
-                "request_timeout": 120
-            }
+            "llm_config": llm_config
         },
         "google_analyst": {
             "name": "Google_Analyst",
-            "llm_config": {
-                **llm_config,
-                "request_timeout": 120
-            }
+            "llm_config": llm_config
         },
         "report_writer": {
             "name": "Report_Writer",
-            "llm_config": {
-                **llm_config,
-                "request_timeout": 180
-            }
+            "llm_config": llm_config
         }
     }

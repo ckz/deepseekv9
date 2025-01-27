@@ -3,14 +3,14 @@ Main entry point for the financial news analysis system.
 """
 import asyncio
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any
 from datetime import datetime
 
 from agents import (
     YahooFinanceAgent,
     GoogleNewsAgent,
     ReportWriterAgent,
-    create_group_chat,
+    create_swarm_network,
     get_default_manager_config
 )
 from config import Config, validate_config, get_agent_configs
@@ -36,15 +36,16 @@ async def initialize_system() -> Dict[str, Any]:
             "writer": ReportWriterAgent(**agent_configs["report_writer"])
         }
         
-        # 创建GroupChat
-        group_chat = create_group_chat(
+        # 创建GroupChat和Manager
+        chat_system = create_swarm_network(
             manager_config=get_default_manager_config(),
             agents=list(agents.values())
         )
         
         return {
             "agents": agents,
-            "group_chat": group_chat
+            "group_chat": chat_system["group_chat"],
+            "manager": chat_system["manager"]
         }
     
     except Exception as e:
@@ -54,7 +55,8 @@ async def initialize_system() -> Dict[str, Any]:
 async def run_analysis(
     topic: str,
     agents: Dict[str, Any],
-    group_chat: Any
+    group_chat: Any,
+    manager: Any
 ) -> Dict[str, Any]:
     """运行新闻分析流程"""
     try:
@@ -64,33 +66,37 @@ async def run_analysis(
         context = AnalysisContext(topic)
         logger.info(f"Created analysis context with ID: {context.analysis_id}")
         
-        # 收集Yahoo Finance数据
-        yahoo_data = await agents["yahoo"].process_news(topic, context)
-        logger.info("Yahoo Finance data collected")
+        # 设置初始消息
+        initial_message = f"""请分析以下主题的财经新闻: {topic}
         
-        # 收集Google新闻数据
-        google_data = await agents["google"].analyze_news(topic, context)
-        logger.info("Google News data collected")
+1. Yahoo Finance Agent: 请收集和分析相关的财务数据
+2. Google News Agent: 请收集和分析相关的新闻文章
+3. Report Writer: 根据收集到的信息生成综合报告
+
+请确保报告包含:
+- 市场数据分析
+- 新闻情感分析
+- 关键见解和建议"""
+
+        # 启动对话
+        result = await manager.initiate_chat(
+            recipient=agents["yahoo"],
+            message=initial_message,
+            clear_history=True
+        )
+        logger.info("Group chat completed")
         
-        # 生成报告
-        analysis_results = {
-            "yahoo_data": yahoo_data,
-            "google_data": google_data,
-            "timestamp": datetime.utcnow().isoformat()
+        # 整合结果
+        final_report = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "topic": topic,
+            "content": result,
+            "thought_chains": {
+                "yahoo": context.get_agent_thoughts(agents["yahoo"].name),
+                "google": context.get_agent_thoughts(agents["google"].name),
+                "writer": context.get_agent_thoughts(agents["writer"].name)
+            }
         }
-        
-        final_report = await agents["writer"].generate_report(analysis_results, context)
-        logger.info("Final report generated")
-        
-        # 记录完整的思维链
-        thought_chains = {
-            "yahoo": context.get_agent_thoughts(agents["yahoo"].name),
-            "google": context.get_agent_thoughts(agents["google"].name),
-            "writer": context.get_agent_thoughts(agents["writer"].name)
-        }
-        
-        # 将思维链添加到最终报告
-        final_report["thought_chains"] = thought_chains
         
         return final_report
     
@@ -109,7 +115,8 @@ async def main(topic: str) -> Dict[str, Any]:
         report = await run_analysis(
             topic=topic,
             agents=system["agents"],
-            group_chat=system["group_chat"]
+            group_chat=system["group_chat"],
+            manager=system["manager"]
         )
         
         logger.info("Analysis completed successfully")
@@ -137,13 +144,10 @@ if __name__ == "__main__":
         print("=" * 50)
         print(f"Topic: {analysis_topic}")
         print(f"Timestamp: {result.get('timestamp', 'N/A')}")
-        print("\nReport Summary:")
+        print("\nReport Content:")
         print("-" * 30)
         if "content" in result:
-            print(f"Summary: {result['content'].get('summary', 'N/A')}")
-            print("\nRecommendations:")
-            for rec in result['content'].get('recommendations', []):
-                print(f"- {rec}")
+            print(result["content"])
         
     except Exception as e:
         logger.error(f"Program failed: {str(e)}")
